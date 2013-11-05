@@ -1,4 +1,4 @@
-lisp-snip
+code snip
 =========
 
-lisp program snip
+snip code collection
