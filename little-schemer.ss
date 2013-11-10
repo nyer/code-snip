@@ -393,8 +393,8 @@
      (else (cons (car l)
 		 (rember s (cdr l)))))))
 
-# determin whether a representation of arithmetic expression
-# contains only numbers besides +, * and ^
+; determin whether a representation of arithmetic expression
+; contains only numbers besides +, * and ^
 (define numbered?
   (lambda (aexp)
     (cond
@@ -403,15 +403,14 @@
       (and (numbered? (car aexp))
 	   (numbered? (car (cdr (cdr aexp)))))))))
 
-(define power
+(define ^
   (lambda (a b)
     (cond
      ((eq? b 1) a)
-     (else (* a (power a (sub1 b)))))))
+     (else (* a (^ a (sub1 b)))))))
 
-# eval the in-fix numbered arithmetic expression
-(define value
-  (lambda (nexp)
+; eval the in-fix numbered arithmetic expression
+(define value  (lambda (nexp)
     (cond
      ((atom? nexp) nexp)
      ((eq? (car (cdr nexp)) (quote *))
@@ -421,10 +420,10 @@
       (+ (value (car nexp))
 	 (value (car (cdr (cdr nexp))))))
      (else 
-      (power (value (car nexp))
+      (^ (value (car nexp))
 	     (value (car (cdr (cdr nexp)))))))))
 
-# eval the sufix numbered arithmetic expression.
+; eval the sufix numbered arithmetic expression.
 (define value
   (lambda (nexp)
     (cond
@@ -436,7 +435,7 @@
       (+ (value (car (cdr nexp)))
 	 (value (car (cdr (cdr nexp))))))
      (else
-      (power (value (car (cdr nexp)))
+      (^ (value (car (cdr nexp)))
 	     (value (car (cdr (cdr nexp)))))))))
 
 (define 1st-sub-exp
@@ -459,7 +458,7 @@
       (* (value (1st-sub-exp nexp))
 	 (value (2nd-sub-exp nexp))))
      (else
-      (power (value (1st-sub-exp nexp))
+      (^ (value (1st-sub-exp nexp))
 	     (value (2nd-sub-exp nexp)))))))
 
 (define sero?
@@ -485,9 +484,9 @@
       (not (or (member? (car lat) (cdr lat))
 	       (set? (cdr lat))))))))
 
-# cons the first atom in the lat onto the result 
-# of natural recursion, after removing all the occurences
-# of the first atom from the of the lat.
+; cons the first atom in the lat onto the result 
+; of natural recursion, after removing all the occurences
+; of the first atom from the of the lat.
 (define makeset
   (lambda (lat)
     (cond
@@ -496,52 +495,57 @@
       (cons (car lat)
 	    (makeset (multirember (car lat) (cdr lat))))))))
 
+; return true if the set2 contains set1
 (define subset?
   (lambda (set1 set2)
     (cond
      ((null? set1) #t)
-     (else 
+     (else
       (and (member? (car set1) set2)
-	   (subset (cdr set1) set2))))))
+	   (subset? (cdr set1) set2))))))
 
+; return true if two set is equal
 (define eqset?
   (lambda (set1 set2)
     (and (subset? set1 set2)
 	 (subset? set2 set1))))
 
+; return true if two set has common atoms
 (define intersect?
   (lambda (set1 set2)
     (cond
-     ((null? set1) #t)
+     ((null? set1) #f)
      (else
       (or (member? (car set1) set2)
 	  (intersect? (cdr set1) set2))))))
 
+; return a set contains common atoms of set1 and set2
 (define intersect
   (lambda (set1 set2)
     (cond
-     ((null? set1) (quote ()))
+     ((null? set1) set1)
      ((member? (car set1) set2)
-      (cons (car set1) (intersect (cdr set1) set2)))
-     (else
-      (intersect (cdr set1) set2)))))
+      (cons (car set1)
+	    (intersect (cdr set1) set2)))
+     (else (intersect (cdr set1) set2)))))
 
+;; return the union of set1 and set2
 (define union
   (lambda (set1 set2)
     (cond
      ((null? set1) set2)
-     ((member? (car set1) set2)
+     ((member? (car set1) set2) 
       (union (cdr set1) set2))
-     (else
-      (cons (car set1)
-	    (union (cdr set1) set2))))))
+     (else (cons (car set1)
+		 (union (cdr set1) set2))))))
 
 (define intersectall
   (lambda (l-set)
     (cond
      ((null? (cdr l-set)) (car l-set))
-     (else (intersect (car l-set)
-		      (intersectall (cdr l-set)))))))
+     (else
+      (intersect (car l-set)
+		 (intersectall (cdr l-set)))))))
 
 (define a-pair?
   (lambda (x)
@@ -549,8 +553,8 @@
      ((atom? x) #f)
      ((null? x) #f)
      ((null? (cdr x)) #f)
-     (else
-      (not (null? (cdr (cdr x))))))))
+     ((null? (cdr (cdr x))) #t)
+     (else #f))))
 
 (define first
   (lambda (p)
@@ -560,31 +564,29 @@
     (car (cdr p))))
 (define build
   (lambda (s1 s2)
-    (cons s1 (cons s2 (quote ())))))
+    (cons s1 (cons s2 '()))))
 (define third
-  (lambda (p)
-    (car (cdr (cdr p)))))
+  (lambda (l)
+    (car (cdr (cdr l)))))
 
 (define fun?
   (lambda (rel)
-    (set? (firsts rel))))
-
+    (sets? (firsts rel))))
 (define revpair
   (lambda (pair)
     (build (second pair) (first pair))))
+
 (define revrel
   (lambda (rel)
     (cond
      ((null? rel) (quote ()))
      (else
       (cons (revpair (car rel))
-	    (revel (cdr rel))))))
-
-(define fullfun?
+	    (revrel (cdr rel)))))))
+(define fullfun
   (lambda (fun)
     (set? (seconds fun))))
-
-(define one-to-one?
+(define one-to-one
   (lambda (fun)
     (fun? (revrel fun))))
 
@@ -592,48 +594,51 @@
   (lambda (test? a l)
     (cond
      ((null? l) (quote ()))
-     ((test? a (car l)) (cdr l))
-     (else (cons (car l)
-		 (rember-f (test? a (cdr l))))))))
+     ((test? (car l) a) (cdr l))
+     (else
+      (cons (car l)
+	    (rember-f test? a (cdr l)))))))
 
 (define eq?-c
   (lambda (a)
     (lambda (x)
-      (eq? a x))))
+      (eq? x a))))
+(define eq?-salad
+  (eq?-c 'k))
 
-(define eq?-salad (eq?-c 'salad))
 
 (define rember-f
   (lambda (test?)
     (lambda (a l)
       (cond
-       ((null? l) (quote ()))
-       ((test? (car l) a) (cdr l))
+       ((null? l) #f)
+       ((test? (car l) a) #t)
        (else (cons (car l)
-		   ((rember-f test?) a
-		    (cdr l))))))))
+		   ((rember-f test?) a (cdr l))))))))
+
+(define rember-eq?
+  (rember-f eq?))
 
 (define insertL-f
   (lambda (test?)
     (lambda (new old l)
       (cond
-       ((null? l) (quote ()))
-       ((test? (car l) old)
+       ((null? l) l)
+       ((test? (car l) new)
 	(cons new (cons old (cdr l))))
-       (else
-	(cons (car l)
-	      ((insertL-f test?) new old (cdr l))))))))
+       (else (cons (car l)
+		   ((insertL-f test?) new old (cdr l))))))))
 
 (define insertR-f
   (lambda (test?)
     (lambda (new old l)
       (cond
-       ((null? l) (quote ()))
+       ((null? l) l)
        ((test? (car l) old)
-	(cons new l))
-       (else 
+	(cons old (cons new (cdr l))))
+       (else
 	(cons (car l)
-	      ((insertR-f test?) new old (cdr l))))))))
+	      ((insertR-l test?) new old (cdr l))))))))
 
 (define seqL
   (lambda (new old l)
@@ -641,67 +646,267 @@
 (define seqR
   (lambda (new old l)
     (cons old (cons new l))))
-
 (define insert-g
   (lambda (seq)
     (lambda (new old l)
       (cond
-       ((null? l) (quote ()))
+       ((null? l) l)
        ((eq? (car l) old)
 	(seq new old (cdr l)))
        (else (cons (car l)
-		   ((insert-g seq) new old (cdr l))))))))
-
-(define insertL
-  (insert-g seqL))
-(define insertR
-  (insert-g seqR))
+		   ((insert-g seq) new old
+		    (cdr l))))))))
 
 (define insertL
   (insert-g
    (lambda (new old l)
-     (cons new (cons old l)))))
+     (cons new (cond old l)))))
 
 (define seqS
   (lambda (new old l)
     (cons new l)))
-
-(define subst
-  (insert-g seqS))
+(define subst (insert-g seqS))
 
 (define atom-to-function
   (lambda (x)
     (cond
-     ((eq? x (quote +)) +)
-     ((eq? x (quote *)) *)
-     (else power))))
+     ((eq? '+ x) +)
+     ((eq? '* x) *)
+     (else ^))))
 
 (define value
   (lambda (nexp)
     (cond
      ((atom? nexp) nexp)
-     (else
-      ((atom-to-function
-	(operator nexp))
-       (value (1st-sub-exp nexp))
-       (value (2nd-sub-exp nexp)))))))
+     (else ((atom-to-function (operator nexp))
+	    (value (1st-sub-exp nexp))
+	    (value (2nd-sub-exp nexp)))))))
 
 (define multirember-f
   (lambda (test?)
     (lambda (a lat)
-      (cond
-       ((null? lat) (quote ()))
-       ((test? (car lat) a)
-	((multirember-f test?) (a (cdr lat))))
-       (else
-	(cons (car lat)
-	      ((multirember-f test?) a (cdr lat))))))))
+      ((null? lat) lat)
+      ((test? (car lat) a)
+       ((multirember-f test?) a (cdr lat)))
+      (else (cons (car lat)
+		  ((multirember-f test?)
+		   a (cdr lat)))))))
+
+(define multirember-eq?
+  (multirember-f eq?))
+
+(define eq?-tuna
+  (eq?-c 'tuna))
 
 (define multiremberT
   (lambda (test? lat)
     (cond
-     ((null? lat) (quote ()))
+     ((null? lat) lat)
      ((test? (car lat))
       (multiremberT test? (cdr lat)))
      (else (cons (car lat)
 		 (multiremberT test? (cdr lat)))))))
+
+(define Y
+  (lambda le)
+  ((lambda (f) (f f))
+   (lambda (f)
+     (le (lambda (x) ((f f) x))))))
+
+(define new-entry build)
+
+(define lookup-in-entry-help
+  (lambda (name names values entry-f)
+    (cond
+     ((null? names) (entry-f name))
+     ((eq? (car names) name) (car values))
+     (else (lookup-in-entry-help
+	    name (cdr names) (cdr values) entry-f)))))
+
+(define lookup-in-entry
+  (lambda (name entry entry-f)
+    (lookup-in-entry-help
+     name
+     (first entry)
+     (second entry)
+     entry-f)))
+
+(define extend-table cons)
+(define lookup-in-table
+  (lambda (name table table-f)
+    (cond
+     ((null table) (table-f name))
+     (loopup-in-entry name (car table)
+		      (lambda (name)
+			(lookup-in-table
+			 name
+			 (cdr table)
+			 table-f))))))
+
+(define expression-to-action
+  (lambda (e)
+    (cond
+     ((atom? e) (atom-to-action e))
+     (else (list-to-action e)))))
+(define atom-to-action
+  (lambda (e)
+    (cond
+     ((number? e) *const)
+     ((eq? e #t) *const)
+     ((eq? e #f) *const)
+     ((eq? e (quote cons)) *const)
+     ((eq? e (quote car)) *const)
+     ((eq? e (quote cdr)) *const)
+     ((eq? e (quote null?)) *const)
+     ((eq? e (quote eq?)) *const)
+     ((eq? e (quote atom?)) *const)
+     ((eq? e (quote add1)) *const)
+     ((eq? e (quote sub1)) *const)
+     ((eq? e (quote zero?)) *const)
+     ((eq? e (quote number?)) *const)
+     (else *identifier))))
+
+(define list-to-action
+  (lambda (e)
+    (cond
+     ((atom? (car e))
+      (cond
+       ((eq? (car e) (quote quote))
+	*quote)
+       ((eq? (car e) (quote lambda))
+	*lambda)
+       ((eq? (car e) (quote cond))
+	*cond)
+       (else *application)))
+     (else *application))))
+
+(define value
+  (lambda (e)
+    (meaning e (quote ()))))
+
+(define meaning
+  (lambda (e table)
+    ((expression-to-action e) e table)))
+
+(define *const
+  (lambda (e table)
+    (cond
+     ((number? e) e)
+     ((eq? e #t) #t)
+     ((eq? e #f) #f)
+     (else (build (quote primitive) e)))))
+
+(define text-of second)
+(define *quote
+  (lambda (e table)
+    (text-of e)))
+
+(define initial-table
+  (lambda (name)
+    (car (quote ()))))
+
+(define *identifier
+  (lambda (e table)
+    (lookup-in-table e table initial-table)))
+
+(define table-of first)
+(define formals-of second)
+(define body-of third)
+
+(define else?
+  (lambda (x)
+    (cond
+     ((atom? x) (eq? x (quote else)))
+     (else #f))))
+(define question-of first)
+(define answer-of second)
+(define evcon
+  (lambda (lines table)
+    (cond
+     ((else? (question-of (car lines)))
+      (meaning (answer-of (car lines))
+	       table))
+     ((meaning (question-of (car lines))
+	       table)
+      (meaning (answer-of (car lines))
+	       table))
+     (else (evcon (cdr lines) table)))))
+(define *cond
+  (lambda (e table)
+    (evcon (cond-lines-of e) table)))
+(define cond-lines-of cdr)
+
+(define evlis
+  (lambda (args table)
+    (cond
+     ((null? args) (quote ()))
+     (else (cons (meaning (car args) table)
+		 (evlis (cdr args) table))))))
+
+(define function-of car)
+(define arguments-of cdr)
+(define *application
+  (lambda (e table)
+    (apply
+     (meaning (function-of e) table)
+     (evlis (arguments-of e) table))))
+
+(define primitive?
+  (lambda (l)
+    (eq? (first l) (quote primitive))))
+(define none-primitive?
+  (lambda (l)
+    (eq? (first l) (quote nonprimitive))))
+
+(define apply
+  (lambda (fun vals)
+    (cond
+     ((primitive? fun)
+      (apply-primitive
+       (second fun) vals))
+     ((non-primitive? fun)
+      (apply-closure
+       (second fun) vals)))))
+
+(define apply-primitive
+  (lambda (name vals)
+    (cond
+     ((eq? name (quote cons))
+      (cons (first vals) (second vals)))
+     ((eq? name (quote car))
+      (car (first vals)))
+     ((eq? name (quote cdr))
+      (cdr (first vals)))
+     ((eq? name (quote null?))
+      (null? (first vals)))
+     ((eq? name (quote eq?))
+      (eq? (first vals) (second vals)))
+     ((eq? name (quote atom?))
+      (:atom? (first vals)))
+     ((eq? name (quote zero?))
+      (zero? (first vals)))
+     ((eq? name (quote add1))
+      (add1 (first vals)))
+     ((eq? name (quote sub1))
+      (sub1 (first vals)))
+     ((eq? name (quote number?))
+      (number? (first vals))))))
+(define :atom?
+  (lambda (x)
+    (cond
+     ((atom? x) #t)
+     ((null? x) #f)
+     ((eq? (car x) (quote primitive))
+      #t)
+     ((eq? (car x) (quote nonprimitive))
+      #t)
+     (else #f))))
+
+(define apply-closure
+  (lambda (closure vals)
+    (meaning (body-of closure)
+	     (extend-table
+	      (new-entry
+	       (formals-of closure)
+	       vals)
+	      (table-of closure)))))
